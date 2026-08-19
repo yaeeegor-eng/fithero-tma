@@ -1,5 +1,6 @@
 import { UserProfile, LeaderboardUser, Achievement, WorkoutLogEntry } from '../types';
-import { PRESET_AVATARS as PRESET_AVATAR_MAP } from '../utils/avatarUtils';
+import { PRESET_AVATARS as PRESET_AVATAR_MAP, createSvgAvatarDataUri } from '../utils/avatarUtils';
+import { TelegramUser } from '../utils/telegram';
 
 export function calculateOvr(profile: UserProfile): number {
   const { strength, endurance, agility, intellect } = profile.stats;
@@ -13,6 +14,42 @@ export function calculateOvr(profile: UserProfile): number {
 
 export function getXpRequiredForLevel(level: number): number {
   return Math.round(150 * Math.pow(1.28, level - 1));
+}
+
+export function createStarterProfile(tgUser?: TelegramUser | null): UserProfile {
+  if (tgUser && (tgUser.first_name || tgUser.id)) {
+    const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ').trim() || `Атлет #${tgUser.id}`;
+    const initials = (fullName.split(' ').filter(Boolean).map((w) => w[0]).join('') || 'АТ').slice(0, 2).toUpperCase();
+    const fallbackSvg = createSvgAvatarDataUri(initials, '#0F172A', '#D21624', 'striker');
+    const avatar = tgUser.photo_url || fallbackSvg;
+    const username = tgUser.username ? `@${tgUser.username}` : `@id${tgUser.id || 'user'}`;
+
+    return {
+      name: fullName,
+      username: username,
+      avatarUrl: avatar,
+      avatarPreset: 'striker',
+      level: 1,
+      currentXp: 0,
+      maxXp: 150,
+      totalWorkouts: 0,
+      streakDays: 0,
+      longestStreak: 0,
+      lastWorkoutDate: '',
+      stats: {
+        strength: 50,
+        endurance: 50,
+        agility: 50,
+        intellect: 50
+      },
+      fifaCardTheme: 'gold',
+      positionTitle: 'ALL (Новичок)',
+      clubName: 'Telegram Fit Club',
+      countryCode: tgUser.language_code === 'ru' ? '🇷🇺' : '🌐'
+    };
+  }
+
+  return INITIAL_USER_PROFILE;
 }
 
 export const INITIAL_USER_PROFILE: UserProfile = {
@@ -39,7 +76,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   countryCode: '🇷🇺'
 };
 
-export { INITIAL_ACHIEVEMENTS } from './achievementsData';
+export { INITIAL_ACHIEVEMENTS, getFreshAchievements } from './achievementsData';
 
 export const INITIAL_LEADERBOARD: LeaderboardUser[] = [
   {

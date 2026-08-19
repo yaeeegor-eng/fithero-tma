@@ -21,7 +21,9 @@ import {
   INITIAL_RECENT_LOGS,
   INITIAL_LEADERBOARD,
   getXpRequiredForLevel,
-  calculateOvr
+  calculateOvr,
+  createStarterProfile,
+  getFreshAchievements
 } from './data/initialData';
 import { INITIAL_EXERCISES } from './data/exercisesData';
 import { INITIAL_ACHIEVEMENTS } from './data/achievementsData';
@@ -43,18 +45,43 @@ import { CreatePostModal } from './components/CreatePostModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { LevelUpCelebration } from './components/LevelUpCelebration';
 import { triggerHaptic } from './utils/haptics';
-import { initTelegramApp, getTelegramUser } from './utils/telegram';
+import { initTelegramApp, getTelegramUser, TelegramUser } from './utils/telegram';
 
 const MAX_DAILY_LOGS_PER_EXERCISE = 5;
 
 export default function App() {
-  // Load user profile
+  // Telegram User detection
+  const [tgUser, setTgUser] = useState<TelegramUser | null>(() => getTelegramUser());
+
+  // Load user profile with Telegram prioritization
   const [profile, setProfile] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('fithero_profile');
+    const currentTg = getTelegramUser();
+    const storageKey = currentTg?.id ? `fithero_profile_${currentTg.id}` : 'fithero_profile';
+    const saved = localStorage.getItem(storageKey) || localStorage.getItem('fithero_profile');
+    
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: UserProfile = JSON.parse(saved);
+        // If we are in Telegram and the saved profile was the demo "Алекс Смирнов", create a fresh real account
+        if (currentTg && (parsed.name === 'Алекс Смирнов' || parsed.username === '@alex_fit')) {
+          return createStarterProfile(currentTg);
+        }
+        // If we are in Telegram, ensure latest photo and name are synced
+        if (currentTg && (currentTg.first_name || currentTg.id)) {
+          const fullName = [currentTg.first_name, currentTg.last_name].filter(Boolean).join(' ').trim();
+          return {
+            ...parsed,
+            name: (parsed.name && parsed.name !== 'Алекс Смирнов') ? parsed.name : fullName,
+            username: currentTg.username ? `@${currentTg.username}` : parsed.username,
+            avatarUrl: currentTg.photo_url || parsed.avatarUrl
+          };
+        }
+        return parsed;
       } catch {}
+    }
+
+    if (currentTg) {
+      return createStarterProfile(currentTg);
     }
     return INITIAL_USER_PROFILE;
   });
@@ -63,17 +90,25 @@ export default function App() {
   const [exercises] = useState<Exercise[]>(INITIAL_EXERCISES);
 
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLogEntry[]>(() => {
-    const saved = localStorage.getItem('fithero_logs');
+    const currentTg = getTelegramUser();
+    const storageKey = currentTg?.id ? `fithero_logs_${currentTg.id}` : 'fithero_logs';
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch {}
     }
+    // New Telegram user starts with fresh log
+    if (currentTg) {
+      return [];
+    }
     return INITIAL_RECENT_LOGS;
   });
 
   const [achievements, setAchievements] = useState<Achievement[]>(() => {
-    const saved = localStorage.getItem('fithero_achievements');
+    const currentTg = getTelegramUser();
+    const storageKey = currentTg?.id ? `fithero_achievements_${currentTg.id}` : 'fithero_achievements';
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         const parsed: Achievement[] = JSON.parse(saved);
@@ -91,6 +126,9 @@ export default function App() {
           return initAch;
         });
       } catch {}
+    }
+    if (currentTg) {
+      return getFreshAchievements();
     }
     return INITIAL_ACHIEVEMENTS;
   });
@@ -117,16 +155,19 @@ export default function App() {
 
   // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem('fithero_profile', JSON.stringify(profile));
-  }, [profile]);
+    const key = tgUser?.id ? `fithero_profile_${tgUser.id}` : 'fithero_profile';
+    localStorage.setItem(key, JSON.stringify(profile));
+  }, [profile, tgUser]);
 
   useEffect(() => {
-    localStorage.setItem('fithero_logs', JSON.stringify(workoutLogs));
-  }, [workoutLogs]);
+    const key = tgUser?.id ? `fithero_logs_${tgUser.id}` : 'fithero_logs';
+    localStorage.setItem(key, JSON.stringify(workoutLogs));
+  }, [workoutLogs, tgUser]);
 
   useEffect(() => {
-    localStorage.setItem('fithero_achievements', JSON.stringify(achievements));
-  }, [achievements]);
+    const key = tgUser?.id ? `fithero_achievements_${tgUser.id}` : 'fithero_achievements';
+    localStorage.setItem(key, JSON.stringify(achievements));
+  }, [achievements, tgUser]);
 
   useEffect(() => {
     localStorage.setItem('fithero_posts', JSON.stringify(posts));
@@ -139,22 +180,24 @@ export default function App() {
     // Initialize Telegram WebApp environment
     initTelegramApp();
 
-    // Auto-detect Telegram user name/photo if not already customized
-    const tgUser = getTelegramUser();
-    if (tgUser) {
+    // Auto-detect Telegram user name/photo and sync
+    const user = getTelegramUser();
+    if (user) {
+      setTgUser(user);
       setProfile((prev) => {
-        // If current name is default, update with Telegram user details
-        const isDefaultName = !prev.name || prev.name === 'Атлет #7' || prev.name.startsWith('Атлет');
-        if (isDefaultName && tgUser.first_name) {
-          const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
-          return {
-            ...prev,
-            name: fullName,
-            username: tgUser.username ? `@${tgUser.username}` : prev.username,
-            avatarUrl: tgUser.photo_url || prev.avatarUrl
-          };
+        const isDemo = prev.name === 'Алекс Смирнов' || prev.username === '@alex_fit';
+        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || `Атлет #${user.id}`;
+        
+        if (isDemo) {
+          return createStarterProfile(user);
         }
-        return prev;
+
+        return {
+          ...prev,
+          name: (prev.name && prev.name !== 'Алекс Смирнов') ? prev.name : fullName,
+          username: user.username ? `@${user.username}` : prev.username,
+          avatarUrl: user.photo_url || prev.avatarUrl
+        };
       });
     }
   }, []);

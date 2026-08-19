@@ -1,5 +1,15 @@
 import { Achievement } from '../types';
 
+export function getFreshAchievements(): Achievement[] {
+  return INITIAL_ACHIEVEMENTS.map((ach) => ({
+    ...ach,
+    unlocked: false,
+    claimed: false,
+    progress: 0,
+    unlockedAt: undefined
+  }));
+}
+
 export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   {
     id: 'pushup_novice',

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Download, Share2, Sparkles, Check, Image as ImageIcon, Edit3, Award, Lock, Shield, ChevronRight } from 'lucide-react';
+import { Download, Share2, Sparkles, Check, Image as ImageIcon, Edit3, Award, Lock, Shield, ChevronRight, Upload, RefreshCw, Camera } from 'lucide-react';
 import { UserProfile } from '../types';
 import { FifaCard } from './FifaCard';
 import { PRESET_AVATARS } from '../data/initialData';
 import { generateFifaCardPng } from '../utils/cardRenderer';
 import { triggerHaptic } from '../utils/haptics';
 import { CARD_TIERS, getTierByLevel, resolveTierForProfile } from '../utils/cardTierUtils';
+import { getTelegramUser } from '../utils/telegram';
 import confetti from 'canvas-confetti';
 
 interface FifaCardStudioProps {
@@ -304,9 +305,29 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
 
       {/* Avatar Presets Selection */}
       <div className="bg-white rounded-3xl p-5 shadow-2xs space-y-3.5">
-        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
-          ФОТО / АВАТАР АТЛЕТА
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900">
+            ФОТО / АВАТАР АТЛЕТА
+          </h3>
+          {(() => {
+            const tg = getTelegramUser();
+            if (tg && tg.photo_url) {
+              return (
+                <button
+                  onClick={() => {
+                    triggerHaptic('success');
+                    onUpdateProfile({ avatarUrl: tg.photo_url, avatarPreset: 'telegram' });
+                  }}
+                  className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[#1664B0] bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-xl transition-all"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Фото из Telegram</span>
+                </button>
+              );
+            }
+            return null;
+          })()}
+        </div>
 
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
           {PRESET_AVATARS.map((item) => {
@@ -338,6 +359,33 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
             );
           })}
         </div>
+
+        {/* Upload Custom Avatar */}
+        <label className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-stone-200 hover:border-slate-900 rounded-2xl cursor-pointer text-xs font-mono font-bold text-slate-600 hover:text-slate-900 transition-all bg-stone-50/50">
+          <Upload className="w-3.5 h-3.5" />
+          <span>Загрузить своё фото для карточки</span>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  if (event.target?.result) {
+                    triggerHaptic('success');
+                    onUpdateProfile({
+                      avatarUrl: event.target.result as string,
+                      avatarPreset: 'custom'
+                    });
+                  }
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+          />
+        </label>
       </div>
 
       {/* Edit Profile Modal */}

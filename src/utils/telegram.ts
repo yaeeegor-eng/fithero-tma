@@ -52,23 +52,49 @@ export function initTelegramApp() {
 
 export function getTelegramUser(): TelegramUser | null {
   const tg = getTelegramWebApp();
-  if (!tg) return null;
-
-  try {
-    const user = tg.initDataUnsafe?.user;
-    if (user && user.first_name) {
+  if (tg && tg.initDataUnsafe?.user) {
+    const user = tg.initDataUnsafe.user;
+    if (user && (user.first_name || user.id)) {
       return {
         id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        username: user.username,
-        photo_url: user.photo_url,
-        language_code: user.language_code,
-        is_premium: user.is_premium
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        username: user.username || '',
+        photo_url: user.photo_url || '',
+        language_code: user.language_code || 'ru',
+        is_premium: user.is_premium || false
       };
     }
-  } catch (err) {
-    console.warn('Could not parse Telegram user info:', err);
+  }
+
+  // Fallback: parse tgWebAppData from URL hash/search if direct object is deferred
+  if (typeof window !== 'undefined') {
+    try {
+      const hash = window.location.hash.slice(1);
+      const search = window.location.search.slice(1);
+      const params = new URLSearchParams(hash || search);
+      const tgData = params.get('tgWebAppData');
+      if (tgData) {
+        const subParams = new URLSearchParams(tgData);
+        const userJson = subParams.get('user');
+        if (userJson) {
+          const user = JSON.parse(decodeURIComponent(userJson));
+          if (user) {
+            return {
+              id: user.id,
+              first_name: user.first_name || '',
+              last_name: user.last_name || '',
+              username: user.username || '',
+              photo_url: user.photo_url || '',
+              language_code: user.language_code || 'ru',
+              is_premium: user.is_premium || false
+            };
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('URL parsing fallback error:', err);
+    }
   }
 
   return null;
