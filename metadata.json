@@ -1,0 +1,6 @@
+{
+  "name": "FitHero TMA - Workout RPG & FIFA Card",
+  "description": "Telegram Mini App for tracking workouts with RPG stat progression (Strength, Endurance, Agility, Intellect), FIFA-style card generator, streak calendar, and leaderboards.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
