@@ -9,7 +9,8 @@ import {
   Brain,
   Gift,
   X,
-  Eye
+  Eye,
+  ArrowLeft
 } from 'lucide-react';
 import { Achievement, UserProfile } from '../types';
 import { triggerHaptic } from '../utils/haptics';
@@ -19,12 +20,14 @@ interface AchievementsViewProps {
   achievements: Achievement[];
   profile: UserProfile;
   onClaimReward: (achievementId: string) => void;
+  onBack?: () => void;
 }
 
 export const AchievementsView: React.FC<AchievementsViewProps> = ({
   achievements,
   profile,
-  onClaimReward
+  onClaimReward,
+  onBack
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [inspectedAchievement, setInspectedAchievement] = useState<Achievement | null>(null);
@@ -75,19 +78,33 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
       {/* Top Bento Header in #D21624 */}
       <div className="bg-[#D21624] text-white rounded-3xl p-5 shadow-2xs relative overflow-hidden">
         <div className="flex items-start justify-between relative z-10">
-          <div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-red-100 flex items-center gap-1.5">
-              <Trophy className="w-3.5 h-3.5 text-white" /> ЗАЛ СЛАВЫ АТЛЕТА
-            </span>
-            <h2 className="text-xl font-black tracking-tight mt-1 text-white">
-              Трофеи и Достижения
-            </h2>
-            <p className="text-xs text-red-100 mt-0.5 font-medium">
-              Каждый трофей обладает уникальным коллекционным арт-скином и бонусами
-            </p>
+          <div className="flex items-start gap-3">
+            {onBack && (
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  onBack();
+                }}
+                className="p-2 rounded-2xl bg-white/20 hover:bg-white/30 text-white active:scale-95 transition-all shrink-0 mt-0.5"
+                title="Назад в Профиль"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            <div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-red-100 flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5 text-white" /> ЗАЛ СЛАВЫ АТЛЕТА
+              </span>
+              <h2 className="text-xl font-black tracking-tight mt-1 text-white">
+                Трофеи и Достижения
+              </h2>
+              <p className="text-xs text-red-100 mt-0.5 font-medium">
+                Каждый трофей обладает уникальным коллекционным арт-скином и бонусами
+              </p>
+            </div>
           </div>
 
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <span className="text-3xl font-mono font-black text-white leading-none block">
               {unlockedCount}/{totalCount}
             </span>

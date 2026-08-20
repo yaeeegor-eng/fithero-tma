@@ -5,7 +5,7 @@ import { resolveTierForProfile } from './cardTierUtils';
 export async function generateFifaCardPng(profile: UserProfile, cardElementId: string): Promise<string> {
   const canvas = document.createElement('canvas');
   const width = 640;
-  const height = 880;
+  const height = 920;
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -14,182 +14,241 @@ export async function generateFifaCardPng(profile: UserProfile, cardElementId: s
   const tier = resolveTierForProfile(profile);
   const ovr = calculateOvr(profile);
 
-  // Background Theme Gradient Palette
-  let c1 = '#2e1d03';
-  let c2 = '#4d3306';
-  let c3 = '#170e01';
-  let borderCol = 'rgba(251, 191, 36, 0.6)';
-  let textCol = '#FFFFFF';
-  let labelCol = '#FCD34D';
-  let accentCol = '#F59E0B';
+  const c1 = tier.primaryHex || '#1e2530';
+  const c3 = tier.secondaryHex || '#0a0d13';
+  const accentCol = tier.accentHex || '#F59E0B';
+  const textCol = '#FFFFFF';
+  const labelCol = tier.accentHex || '#F59E0B';
 
-  if (tier.tierId === 'bronze') {
-    c1 = '#1c120c';
-    c2 = '#2d1b12';
-    c3 = '#120a06';
-    borderCol = 'rgba(180, 83, 9, 0.6)';
-    labelCol = '#FDE68A';
-    accentCol = '#B45309';
-  } else if (tier.tierId === 'silver') {
-    c1 = '#0f172a';
-    c2 = '#1e293b';
-    c3 = '#090d16';
-    borderCol = 'rgba(148, 163, 184, 0.6)';
-    labelCol = '#CBD5E1';
-    accentCol = '#94A3B8';
-  } else if (tier.tierId === 'diamond') {
-    c1 = '#03152d';
-    c2 = '#092957';
-    c3 = '#020b17';
-    borderCol = 'rgba(56, 189, 248, 0.6)';
-    labelCol = '#7DD3FC';
-    accentCol = '#0284C7';
-  } else if (tier.tierId === 'red_icon') {
-    c1 = '#220205';
-    c2 = '#45050d';
-    c3 = '#120103';
-    borderCol = 'rgba(210, 22, 36, 0.7)';
-    labelCol = '#FECDD3';
-    accentCol = '#D21624';
-  } else if (tier.tierId === 'mythic') {
-    c1 = '#050507';
-    c2 = '#121217';
-    c3 = '#020203';
-    borderCol = 'rgba(245, 158, 11, 0.8)';
-    labelCol = '#FBBF24';
-    accentCol = '#E11D48';
-  }
-
+  // Background Theme Gradient
   const bgGradient = ctx.createLinearGradient(0, 0, width, height);
   bgGradient.addColorStop(0, c1);
-  bgGradient.addColorStop(0.5, c2);
+  bgGradient.addColorStop(0.5, '#12161F');
   bgGradient.addColorStop(1, c3);
 
-  // Rounded 64px Card Path
-  const r = 64;
+  // Outer Card Path (Rounded 56px)
+  const r = 56;
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(r, 0);
-  ctx.lineTo(width - r, 0);
-  ctx.arcTo(width, 0, width, r, r);
-  ctx.lineTo(width, height - r);
-  ctx.arcTo(width, height, width - r, height, r);
-  ctx.lineTo(r, height);
-  ctx.arcTo(0, height, 0, height - r, r);
-  ctx.lineTo(0, r);
-  ctx.arcTo(0, 0, r, 0, r);
-  ctx.closePath();
+  ctx.roundRect(0, 0, width, height, r);
   ctx.clip();
 
   // Fill Background
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Geometric Pattern
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-  ctx.lineWidth = 1.5;
-  for (let i = -width; i < width * 2; i += 40) {
+  // Ambient Radial Glow from top
+  const radialGlow = ctx.createRadialGradient(width / 2, 200, 50, width / 2, 200, 450);
+  radialGlow.addColorStop(0, `${accentCol}33`);
+  radialGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = radialGlow;
+  ctx.fillRect(0, 0, width, height);
+
+  // Subtle Geometric Micro-Grid
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < width; x += 24) {
     ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.lineTo(i + height, height);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < height; y += 24) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
     ctx.stroke();
   }
 
-  // Border
-  ctx.strokeStyle = borderCol;
-  ctx.lineWidth = 6;
+  // Card Outer Glass Border
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 4;
   ctx.stroke();
 
   ctx.restore();
 
-  // Header Title & Tier
-  ctx.fillStyle = accentCol;
-  ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText(tier.rarityTag, 50, 65);
-
-  ctx.textAlign = 'right';
-  ctx.fillText(tier.themeTitle, width - 50, 65);
-
-  // Big OVR
-  ctx.fillStyle = textCol;
-  ctx.font = '900 110px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText(ovr.toString(), 50, 200);
-
-  // Position
-  ctx.fillStyle = labelCol;
-  ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-  const posText = profile.positionTitle.split(' ')[0] === 'ALL' ? 'УНИВЕРСАЛ' : profile.positionTitle.split(' ')[0];
-  ctx.fillText(posText || 'УНИВЕРСАЛ', 50, 245);
-
-  // Flag & Shield
-  ctx.font = '36px sans-serif';
-  ctx.fillText(profile.countryCode || '🇷🇺', 50, 310);
-
-  ctx.font = '28px sans-serif';
-  ctx.fillText('🛡️', 110, 308);
-
-  // Framed Athlete Avatar Portrait
-  const avatarX = 330;
-  const avatarY = 100;
-  const avatarSize = 250;
-  const avatarR = 32;
+  // -------------------------------------------------------------
+  // 60% HERO PHOTO CONTAINER (x: 24, y: 24, w: 592, h: 570, r: 44)
+  // -------------------------------------------------------------
+  const photoX = 24;
+  const photoY = 24;
+  const photoW = width - 48;
+  const photoH = 570;
+  const photoR = 44;
 
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(avatarX + avatarR, avatarY);
-  ctx.lineTo(avatarX + avatarSize - avatarR, avatarY);
-  ctx.arcTo(avatarX + avatarSize, avatarY, avatarX + avatarSize, avatarY + avatarR, avatarR);
-  ctx.lineTo(avatarX + avatarSize, avatarY + avatarSize - avatarR);
-  ctx.arcTo(avatarX + avatarSize, avatarY + avatarSize, avatarX + avatarSize - avatarR, avatarY + avatarSize, avatarR);
-  ctx.lineTo(avatarX + avatarR, avatarY + avatarSize);
-  ctx.arcTo(avatarX, avatarY + avatarSize, avatarX, avatarY + avatarSize - avatarR, avatarR);
-  ctx.lineTo(avatarX, avatarY + avatarR);
-  ctx.arcTo(avatarX, avatarY, avatarX + avatarR, avatarY, avatarR);
-  ctx.closePath();
+  ctx.roundRect(photoX, photoY, photoW, photoH, photoR);
   ctx.clip();
 
-  // Background for avatar
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-  ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+  // Photo Background
+  ctx.fillStyle = '#0a0d14';
+  ctx.fillRect(photoX, photoY, photoW, photoH);
 
-  try {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = profile.avatarUrl;
-    await new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = resolve;
-    });
-    ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
-  } catch {
-    // Fallback if image fails to load
-    ctx.fillStyle = accentCol;
-    ctx.font = '900 80px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('FH', avatarX + avatarSize / 2, avatarY + avatarSize / 2 + 30);
+  let imageDrawn = false;
+  if (profile.avatarUrl) {
+    try {
+      const img = new Image();
+      if (!profile.avatarUrl.startsWith('data:')) {
+        img.crossOrigin = 'anonymous';
+      }
+      img.src = profile.avatarUrl;
+      await new Promise<void>((resolve) => {
+        img.onload = () => {
+          try {
+            const aspectImg = img.width / img.height;
+            const aspectBox = photoW / photoH;
+            let drawW = photoW;
+            let drawH = photoH;
+            let drawX = photoX;
+            let drawY = photoY;
+
+            if (aspectImg > aspectBox) {
+              drawW = photoH * aspectImg;
+              drawX = photoX - (drawW - photoW) / 2;
+            } else {
+              drawH = photoW / aspectImg;
+              drawY = photoY - (drawH - photoH) / 2;
+            }
+
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+            imageDrawn = true;
+          } catch {
+            imageDrawn = false;
+          }
+          resolve();
+        };
+        img.onerror = () => resolve();
+        setTimeout(resolve, 1500);
+      });
+    } catch {
+      imageDrawn = false;
+    }
   }
+
+  if (!imageDrawn) {
+    const initials = (profile.name.split(' ').map((w) => w[0]).join('') || 'FH').slice(0, 2).toUpperCase();
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(photoX, photoY, photoW, photoH);
+
+    ctx.fillStyle = accentCol;
+    ctx.font = '900 120px -apple-system, BlinkMacSystemFont, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(initials, photoX + photoW / 2, photoY + photoH / 2 + 40);
+  }
+
+  // Soft Bottom & Top Vignette Gradients for Glass Blending
+  const photoVignette = ctx.createLinearGradient(0, photoY, 0, photoY + photoH);
+  photoVignette.addColorStop(0, 'rgba(0,0,0,0.4)');
+  photoVignette.addColorStop(0.4, 'rgba(0,0,0,0.1)');
+  photoVignette.addColorStop(0.7, 'rgba(0,0,0,0.3)');
+  photoVignette.addColorStop(1, 'rgba(0,0,0,0.85)');
+  ctx.fillStyle = photoVignette;
+  ctx.fillRect(photoX, photoY, photoW, photoH);
+
+  // Photo Container Glass Border
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
   ctx.restore();
 
-  // Name Strip Box
-  const nameBoxY = 385;
-  const nameBoxH = 80;
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+  // -------------------------------------------------------------
+  // FLOATING GLASS BADGES OVER PHOTO
+  // -------------------------------------------------------------
+
+  // 1. Top-Left: OVR + Position Glass Badge
+  const ovrBoxX = photoX + 18;
+  const ovrBoxY = photoY + 18;
+  const ovrBoxW = 105;
+  const ovrBoxH = 95;
+
+  ctx.fillStyle = 'rgba(10, 15, 25, 0.65)';
   ctx.beginPath();
-  ctx.roundRect(50, nameBoxY, width - 100, nameBoxH, 24);
+  ctx.roundRect(ovrBoxX, ovrBoxY, ovrBoxW, ovrBoxH, 24);
   ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = textCol;
+  ctx.font = '900 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
+  ctx.fillText(ovr.toString(), ovrBoxX + ovrBoxW / 2, ovrBoxY + 54);
+
+  const posText = profile.positionTitle.split(' ')[0] === 'ALL' ? 'УНИВЕРСАЛ' : profile.positionTitle.split(' ')[0];
+  ctx.fillStyle = labelCol;
+  ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, monospace';
+  ctx.fillText(posText.slice(0, 10), ovrBoxX + ovrBoxW / 2, ovrBoxY + 80);
+
+  // Country & Flag Pill below OVR box
+  ctx.fillStyle = 'rgba(10, 15, 25, 0.55)';
+  ctx.beginPath();
+  ctx.roundRect(ovrBoxX, ovrBoxY + ovrBoxH + 8, ovrBoxW, 34, 16);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.stroke();
+
+  ctx.font = '18px sans-serif';
+  ctx.fillText(`${profile.countryCode || '🇷🇺'} 🛡️`, ovrBoxX + ovrBoxW / 2, ovrBoxY + ovrBoxH + 24);
+
+  // 2. Top-Right: Tier Rarity & Level Glass Badges
+  const trX = photoX + photoW - 138;
+  const trY = photoY + 18;
+
+  // Tier Pill
+  ctx.fillStyle = 'rgba(10, 15, 25, 0.65)';
+  ctx.beginPath();
+  ctx.roundRect(trX, trY, 120, 36, 18);
+  ctx.fill();
+  ctx.strokeStyle = accentCol;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
 
   ctx.fillStyle = textCol;
-  ctx.font = '900 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '900 13px -apple-system, BlinkMacSystemFont, monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(profile.name.toUpperCase(), width / 2, nameBoxY + 45);
+  ctx.fillText(tier.rarityTag, trX + 60, trY + 23);
 
-  ctx.fillStyle = labelCol;
-  ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
-  ctx.fillText(`${profile.clubName || 'Фитнес-клуб'} • УР. ${profile.level}`, width / 2, nameBoxY + 68);
+  // Level Pill
+  ctx.fillStyle = 'rgba(10, 15, 25, 0.55)';
+  ctx.beginPath();
+  ctx.roundRect(trX + 30, trY + 44, 90, 28, 14);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
 
-  // 6 Stats Grid
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, monospace';
+  ctx.fillText(`УР. ${profile.level}`, trX + 75, trY + 63);
+
+  // 3. Bottom of Photo: Player Name & Club Glass Bar
+  const nameBarX = photoX + 16;
+  const nameBarY = photoY + photoH - 90;
+  const nameBarW = photoW - 32;
+  const nameBarH = 74;
+
+  ctx.fillStyle = 'rgba(10, 15, 25, 0.7)';
+  ctx.beginPath();
+  ctx.roundRect(nameBarX, nameBarY, nameBarW, nameBarH, 24);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = textCol;
+  ctx.font = '900 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText(profile.name.toUpperCase(), nameBarX + nameBarW / 2, nameBarY + 38);
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, monospace';
+  ctx.fillText(`${profile.clubName || 'FitHero Club'} • ${tier.themeTitle}`, nameBarX + nameBarW / 2, nameBarY + 58);
+
+  // -------------------------------------------------------------
+  // LOWER SECTION: 6 MINIMALIST GLASS STAT CHIPS (x6)
+  // -------------------------------------------------------------
   const xpStat = Math.min(99, Math.round((profile.currentXp / profile.maxXp) * 100));
   const streakStat = Math.min(99, profile.streakDays * 4 + 35);
 
@@ -202,43 +261,67 @@ export async function generateFifaCardPng(profile: UserProfile, cardElementId: s
     { label: 'СЕР', val: streakStat }
   ];
 
-  const gridY = 490;
-  const colW = (width - 120) / 2;
+  const chipGap = 8;
+  const chipW = (photoW - chipGap * 5) / 6;
+  const chipH = 78;
+  const chipY = photoY + photoH + 18;
 
-  // Left column
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-  ctx.beginPath();
-  ctx.roundRect(50, gridY, colW, 280, 24);
-  ctx.fill();
+  stats.forEach((st, idx) => {
+    const chipX = photoX + idx * (chipW + chipGap);
 
-  // Right column
-  ctx.beginPath();
-  ctx.roundRect(width - 50 - colW, gridY, colW, 280, 24);
-  ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.beginPath();
+    ctx.roundRect(chipX, chipY, chipW, chipH, 20);
+    ctx.fill();
 
-  // Draw Stat Items
-  stats.forEach((s, idx) => {
-    const isLeft = idx < 3;
-    const itemIndex = isLeft ? idx : idx - 3;
-    const xBase = isLeft ? 75 : width - 50 - colW + 25;
-    const yBase = gridY + 60 + itemIndex * 80;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
+    // Label
+    ctx.textAlign = 'center';
     ctx.fillStyle = labelCol;
-    ctx.fillText(s.label, xBase, yBase);
+    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, monospace';
+    ctx.fillText(st.label, chipX + chipW / 2, chipY + 28);
 
-    ctx.textAlign = 'right';
-    ctx.font = '900 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
+    // Value
     ctx.fillStyle = textCol;
-    ctx.fillText(s.val.toString(), xBase + colW - 50, yBase);
+    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, monospace';
+    ctx.fillText(st.val.toString(), chipX + chipW / 2, chipY + 60);
   });
 
-  // Footer
-  ctx.textAlign = 'center';
-  ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace';
+  // Footer Tag
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, monospace';
   ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.fillText('FITHERO TMA • СЕЗОН 2026', width / 2, height - 35);
+  ctx.fillText('FITHERO • 2026', photoX + 8, height - 32);
 
-  return canvas.toDataURL('image/png');
+  ctx.textAlign = 'right';
+  ctx.fillText(tier.tierName.toUpperCase(), photoX + photoW - 8, height - 32);
+
+  try {
+    return canvas.toDataURL('image/png');
+  } catch (err) {
+    console.warn('Canvas toDataURL fallback:', err);
+    return canvas.toDataURL();
+  }
+}
+
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(';base64,');
+  const contentType = parts[0].split(':')[1] || 'image/png';
+  const raw = window.atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+
+  return new Blob([uInt8Array], { type: contentType });
+}
+
+export function dataUrlToFile(dataUrl: string, filename: string): File {
+  const blob = dataUrlToBlob(dataUrl);
+  return new File([blob], filename, { type: 'image/png' });
 }

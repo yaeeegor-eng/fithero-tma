@@ -1,23 +1,48 @@
 import React, { useState } from 'react';
-import { Download, Share2, Sparkles, Check, Image as ImageIcon, Edit3, Award, Lock, Shield, ChevronRight, Upload, RefreshCw, Camera } from 'lucide-react';
+import {
+  Download,
+  Share2,
+  Sparkles,
+  Check,
+  Image as ImageIcon,
+  Edit3,
+  Award,
+  Lock,
+  Shield,
+  ChevronRight,
+  Upload,
+  RefreshCw,
+  Camera,
+  ArrowLeft,
+  X,
+  ExternalLink,
+  MessageCircle,
+  Copy,
+  Info
+} from 'lucide-react';
 import { UserProfile } from '../types';
 import { FifaCard } from './FifaCard';
-import { PRESET_AVATARS } from '../data/initialData';
-import { generateFifaCardPng } from '../utils/cardRenderer';
+import { PRESET_AVATARS, calculateOvr } from '../data/initialData';
+import { generateFifaCardPng, dataUrlToFile } from '../utils/cardRenderer';
 import { triggerHaptic } from '../utils/haptics';
 import { CARD_TIERS, getTierByLevel, resolveTierForProfile } from '../utils/cardTierUtils';
-import { getTelegramUser } from '../utils/telegram';
+import { openTelegramLink, isTelegramEnvironment, getTelegramUser } from '../utils/telegram';
 import confetti from 'canvas-confetti';
 
 interface FifaCardStudioProps {
   profile: UserProfile;
   onUpdateProfile: (updates: Partial<UserProfile>) => void;
+  onBack?: () => void;
 }
 
-export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdateProfile }) => {
+export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdateProfile, onBack }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // High-res preview & Save Modal
+  const [previewPngData, setPreviewPngData] = useState<string | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const [editName, setEditName] = useState(profile.name);
   const [editClub, setEditClub] = useState(profile.clubName);
@@ -36,6 +61,7 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
 
   const currentTier = resolveTierForProfile(profile);
   const userTierByLevel = getTierByLevel(profile.level);
+  const ovr = calculateOvr(profile);
 
   // Available theme options with required level checks (10 levels per card tier)
   const themeOptions: Array<{
@@ -98,16 +124,51 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
     }
   ];
 
+  const getShareText = () => {
+    return `🔥 Моя карточка атлета в FitHero!\n⭐ Ранг: ${currentTier.tierName} (${ovr} ОБЩ, Ур. ${profile.level})\n💪 СИЛ: ${profile.stats.strength} | 🏃 ВЫН: ${profile.stats.endurance} | ⚡ ЛОВ: ${profile.stats.agility} | 🧠 ИНТ: ${profile.stats.intellect}\n🔥 Стрик: ${profile.streakDays} дн. | 🏆 Тренировок: ${profile.totalWorkouts}`;
+  };
+
   const handleDownloadCard = async () => {
     try {
       setIsExporting(true);
       triggerHaptic('medium');
 
       const pngData = await generateFifaCardPng(profile, 'fifa-card-preview');
-      const link = document.createElement('a');
-      link.download = `FitHero_Card_${profile.name.replace(/\s+/g, '_')}.png`;
-      link.href = pngData;
-      link.click();
+      setPreviewPngData(pngData);
+      setShowSaveModal(true);
+
+      // Attempt 1: Native Share Sheet with File (iOS / Android supports Save to Photos directly!)
+      let sharedFile = false;
+      if (typeof navigator !== 'undefined' && navigator.canShare && typeof File !== 'undefined') {
+        try {
+          const file = dataUrlToFile(pngData, `FitHero_Card_${profile.name.replace(/\s+/g, '_')}.png`);
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `Карточка FitHero - ${profile.name}`,
+              text: getShareText()
+            });
+            sharedFile = true;
+          }
+        } catch {
+          // User closed share sheet or ignored
+        }
+      }
+
+      // Attempt 2: Standard download link for desktop browsers
+      if (!sharedFile) {
+        try {
+          const link = document.createElement('a');
+          link.download = `FitHero_Card_${profile.name.replace(/\s+/g, '_')}.png`;
+          link.href = pngData;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch {
+          // Handled via SaveModal
+        }
+      }
 
       confetti({
         particleCount: 60,
@@ -123,7 +184,7 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
     }
   };
 
-  const handleShareTelegram = () => {
+  const handleShareTelegram = async () => {
     triggerHaptic('success');
     confetti({
       particleCount: 50,
@@ -131,19 +192,52 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
       origin: { y: 0.6 }
     });
 
-    const text = `Моя карточка атлета в FitHero TMA:\nРанг: ${currentTier.tierName} (Ур. ${profile.level})\nСИЛ: ${profile.stats.strength} | ВЫН: ${profile.stats.endurance} | ЛОВ: ${profile.stats.agility} | ИНТ: ${profile.stats.intellect}\nСтрик: ${profile.streakDays} дней!`;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: `FitHero Карточка Атлета - ${profile.name}`,
-        text: text,
-        url: window.location.href,
-      }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(text);
+    const text = getShareText();
+
+    // 1. Try file/media Web Share if available
+    let sharedNatively = false;
+    if (typeof navigator !== 'undefined' && navigator.canShare && typeof File !== 'undefined') {
+      try {
+        const pngData = await generateFifaCardPng(profile, 'fifa-card-preview');
+        setPreviewPngData(pngData);
+        const file = dataUrlToFile(pngData, `FitHero_Card_${profile.name.replace(/\s+/g, '_')}.png`);
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `FitHero Карточка Атлета - ${profile.name}`,
+            text: text,
+            files: [file]
+          });
+          sharedNatively = true;
+        }
+      } catch {
+        // Fall through to Telegram share link
+      }
+    }
+
+    // 2. Direct Telegram Share dialog (opens Telegram contact / chat forwarder)
+    if (!sharedNatively) {
+      const shareUrl = window.location.href;
+      const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+      
+      // Open native Telegram share dialog
+      openTelegramLink(tgShareUrl);
+
+      // Copy text to clipboard as secondary backup
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
       setCopiedNotification(true);
       setTimeout(() => setCopiedNotification(false), 3000);
     }
+  };
+
+  const handleCopyTextOnly = () => {
+    triggerHaptic('light');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(getShareText());
+    }
+    setCopiedNotification(true);
+    setTimeout(() => setCopiedNotification(false), 3000);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -163,16 +257,30 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
     <div className="space-y-4 pb-24 max-w-lg mx-auto">
       {/* Header Banner */}
       <div className="bg-white rounded-3xl p-5 shadow-2xs flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#D21624] uppercase tracking-wider mb-0.5">
-            <Award className="w-4 h-4" /> СТУДИЯ КАРТОЧКИ АТЛЕТА
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                onBack();
+              }}
+              className="p-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-slate-700 active:scale-95 transition-all shrink-0"
+              title="Назад в Профиль"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#D21624] uppercase tracking-wider mb-0.5">
+              <Award className="w-4 h-4" /> СТУДИЯ КАРТОЧКИ АТЛЕТА
+            </div>
+            <h2 className="text-base font-black text-slate-900 leading-snug">
+              Карточка игрока
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">
+              Стиль карты эволюционирует с ростом твоего уровня
+            </p>
           </div>
-          <h2 className="text-base font-black text-slate-900 leading-snug">
-            Карточка игрока
-          </h2>
-          <p className="text-xs text-slate-500 font-medium">
-            Стиль карты эволюционирует с ростом твоего уровня
-          </p>
         </div>
 
         <button
@@ -515,6 +623,100 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* High-Res Card Save & Export Modal */}
+      {showSaveModal && previewPngData && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowSaveModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in-95 my-auto max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#D21624]/10 text-[#D21624] flex items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 leading-tight">
+                    Карточка готова!
+                  </h3>
+                  <p className="text-[11px] font-mono text-slate-500">
+                    {profile.name} • {currentTier.tierName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="p-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-500 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Image Preview */}
+            <div className="py-3 flex flex-col items-center overflow-y-auto max-h-[48vh]">
+              <img
+                src={previewPngData}
+                alt="FitHero Card Preview"
+                className="w-56 rounded-2xl shadow-md border-2 border-stone-200 object-contain select-none"
+              />
+            </div>
+
+            {/* Mobile / Telegram Hint */}
+            <div className="bg-amber-50 border border-amber-200/70 rounded-2xl p-3 text-left space-y-1 mb-3">
+              <div className="flex items-center gap-1.5 text-amber-900 font-mono font-bold text-[11px]">
+                <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                <span>Как сохранить в галерею:</span>
+              </div>
+              <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                В Telegram зажмите пальцем карточку выше и выберите <strong>«Сохранить изображение»</strong> (Save Image).
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  triggerHaptic('success');
+                  const shareUrl = window.location.href;
+                  const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(getShareText())}`;
+                  openTelegramLink(tgShareUrl);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-[#1664B0] hover:bg-blue-800 text-white text-xs font-mono font-bold shadow-2xs active:scale-98 transition-all"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Отправить в Telegram
+              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={previewPngData}
+                  download={`FitHero_Card_${profile.name.replace(/\s+/g, '_')}.png`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => triggerHaptic('medium')}
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-slate-800 text-xs font-mono font-bold active:scale-98 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Скачать файл
+                </a>
+
+                <button
+                  onClick={handleCopyTextOnly}
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-slate-800 text-xs font-mono font-bold active:scale-98 transition-all"
+                >
+                  {copiedNotification ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedNotification ? 'Скопировано' : 'Текст карты'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

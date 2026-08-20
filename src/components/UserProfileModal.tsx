@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { PublicUserProfile, Achievement } from '../types';
 import { triggerHaptic } from '../utils/haptics';
+import { openTelegramLink } from '../utils/telegram';
 import { TrophyArtBadge } from './TrophyArtBadge';
 import { AthleteAvatar } from './AthleteAvatar';
 import confetti from 'canvas-confetti';
@@ -69,10 +70,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [copiedShare, setCopiedShare] = useState(false);
 
   const stats = user.stats || {
-    strength: 75,
-    endurance: 75,
-    agility: 75,
-    intellect: 75
+    strength: 1,
+    endurance: 1,
+    agility: 1,
+    intellect: 1
   };
 
   const statItems = [
@@ -123,16 +124,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const handleShareProfile = () => {
     triggerHaptic('medium');
-    const shareText = `Профиль атлета ${user.name} в FitHero TMA:\n⭐ Рейтинг: ${user.ovr} ОБЩ (Уровень ${user.level})\n💬 «${currentBio}»\n🔥 Стрик: ${user.streakDays} дней | Трофеев: ${userTrophies.length}`;
+    const shareText = `🔥 Профиль атлета ${user.name} в FitHero TMA:\n⭐ Рейтинг: ${user.ovr} ОБЩ (Уровень ${user.level})\n💬 «${currentBio}»\n🔥 Стрик: ${user.streakDays} дней | Трофеев: ${userTrophies.length}`;
+    const shareUrl = window.location.href;
 
     if (navigator.share) {
       navigator.share({
         title: `${user.name} - Профиль FitHero`,
         text: shareText,
-        url: window.location.href
-      }).catch(() => {});
+        url: shareUrl
+      }).catch(() => {
+        const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+        openTelegramLink(tgShareUrl);
+      });
     } else {
-      navigator.clipboard.writeText(shareText);
+      const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+      openTelegramLink(tgShareUrl);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareText).catch(() => {});
+      }
       setCopiedShare(true);
       setTimeout(() => setCopiedShare(false), 2500);
     }

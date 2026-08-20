@@ -173,4 +173,4 @@ export interface PublicUserProfile {
   achievements?: Achievement[];
 }
 
-export type ActiveTab = 'home' | 'feed' | 'exercises' | 'fifa_card' | 'calendar' | 'leaderboard' | 'achievements';
+export type ActiveTab = 'home' | 'feed' | 'exercises' | 'profile' | 'fifa_card' | 'calendar' | 'leaderboard' | 'achievements';

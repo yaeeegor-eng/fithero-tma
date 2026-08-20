@@ -10,7 +10,7 @@ export function calculateOvr(profile: UserProfile): number {
   // Level bonus (1 to 50 max)
   const levelMultiplier = 1 + (Math.min(MAX_LEVEL, profile.level) - 1) * 0.012;
   const rawOvr = Math.round(base * levelMultiplier);
-  return Math.min(99, Math.max(50, rawOvr));
+  return Math.min(99, Math.max(1, rawOvr));
 }
 
 /**
@@ -68,10 +68,10 @@ export function createStarterProfile(tgUser?: TelegramUser | null): UserProfile 
       lastWorkoutDate: '',
       bio: 'Стремлюсь к 99 OVR. Дисциплина каждый день.',
       stats: {
-        strength: 50,
-        endurance: 50,
-        agility: 50,
-        intellect: 50
+        strength: 1,
+        endurance: 1,
+        agility: 1,
+        intellect: 1
       },
       fifaCardTheme: 'auto',
       positionTitle: 'ALL (Новичок)',
@@ -88,22 +88,22 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   username: '@alex_fit',
   avatarUrl: PRESET_AVATAR_MAP.alex,
   avatarPreset: 'striker',
-  level: 8,
-  currentXp: 45,
-  maxXp: getXpRequiredForLevel(8),
-  totalWorkouts: 28,
-  streakDays: 14,
-  longestStreak: 21,
-  lastWorkoutDate: new Date().toISOString().split('T')[0],
+  level: 1,
+  currentXp: 0,
+  maxXp: getXpRequiredForLevel(1),
+  totalWorkouts: 0,
+  streakDays: 0,
+  longestStreak: 0,
+  lastWorkoutDate: '',
   bio: 'Стремлюсь к 99 OVR во всех четырех дисциплинах. Тренируюсь каждый день с FitHero.',
   stats: {
-    strength: 72,    // Сила
-    endurance: 78,   // Выносливость
-    agility: 68,     // Ловкость
-    intellect: 65    // Интеллект
+    strength: 1,    // Сила
+    endurance: 1,   // Выносливость
+    agility: 1,     // Ловкость
+    intellect: 1    // Интеллект
   },
   fifaCardTheme: 'auto',
-  positionTitle: 'ALL (Универсал)',
+  positionTitle: 'ALL (Новичок)',
   clubName: 'Telegram Fit Club',
   countryCode: '🇷🇺'
 };
@@ -192,64 +192,7 @@ export const INITIAL_LEADERBOARD: LeaderboardUser[] = [
   }
 ];
 
-export const INITIAL_RECENT_LOGS: WorkoutLogEntry[] = [
-  {
-    id: 'log_1',
-    exerciseId: 'pushups_camera',
-    exerciseTitle: 'Отжимания от пола',
-    category: 'Сила',
-    timestamp: Date.now() - 1000 * 60 * 60 * 3, // 3 hours ago
-    dateStr: new Date().toISOString().split('T')[0],
-    durationMinutes: 10,
-    setsCompleted: 2,
-    repsOrDistance: '30 отжиманий',
-    caloriesBurned: 45,
-    xpEarned: 35,
-    statsEarned: { strength: 2, endurance: 1 }
-  },
-  {
-    id: 'log_2',
-    exerciseId: 'running_screenshot',
-    exerciseTitle: 'Бег (Кросс / Улица / Дорожка)',
-    category: 'Выносливость',
-    timestamp: Date.now() - 1000 * 60 * 60 * 26, // yesterday
-    dateStr: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    durationMinutes: 28,
-    setsCompleted: 1,
-    repsOrDistance: '5.2 км (4:55 мин/км)',
-    caloriesBurned: 340,
-    xpEarned: 50,
-    statsEarned: { endurance: 3, agility: 1 }
-  },
-  {
-    id: 'log_3',
-    exerciseId: 'stretching_camera',
-    exerciseTitle: 'Растяжка и Мобильность',
-    category: 'Ловкость',
-    timestamp: Date.now() - 1000 * 60 * 60 * 50, // 2 days ago
-    dateStr: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
-    durationMinutes: 15,
-    setsCompleted: 4,
-    repsOrDistance: '4 позы растяжки',
-    caloriesBurned: 70,
-    xpEarned: 30,
-    statsEarned: { agility: 3, strength: 1 }
-  },
-  {
-    id: 'log_4',
-    exerciseId: 'reading_intellect',
-    exerciseTitle: 'Осознанное чтение',
-    category: 'Интеллект',
-    timestamp: Date.now() - 1000 * 60 * 60 * 74, // 3 days ago
-    dateStr: new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0],
-    durationMinutes: 20,
-    setsCompleted: 1,
-    repsOrDistance: '1 прочитанная глава',
-    caloriesBurned: 35,
-    xpEarned: 30,
-    statsEarned: { intellect: 3, endurance: 1 }
-  }
-];
+export const INITIAL_RECENT_LOGS: WorkoutLogEntry[] = [];
 
 export const PRESET_AVATARS = [
   {

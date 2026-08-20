@@ -43,6 +43,7 @@ import { LeaderboardView } from './components/LeaderboardView';
 import { AchievementsView } from './components/AchievementsView';
 import { FeedView } from './components/FeedView';
 import { CreatePostModal } from './components/CreatePostModal';
+import { ProfileView } from './components/ProfileView';
 import { UserProfileModal } from './components/UserProfileModal';
 import { LevelUpCelebration } from './components/LevelUpCelebration';
 import { triggerHaptic } from './utils/haptics';
@@ -63,6 +64,23 @@ export default function App() {
     if (saved) {
       try {
         const parsed: UserProfile = JSON.parse(saved);
+
+        // Sanitize / migrate legacy 50 starting stats or demo stats to starting 1
+        if (parsed.stats) {
+          const hadLegacy50s = parsed.stats.strength === 50 && parsed.stats.endurance === 50 && parsed.stats.agility === 50 && parsed.stats.intellect === 50;
+          const hadLegacyDemoStats = parsed.stats.strength === 72 && parsed.stats.endurance === 78 && parsed.stats.agility === 68 && parsed.stats.intellect === 65;
+          if (hadLegacy50s || hadLegacyDemoStats) {
+            parsed.stats = { strength: 1, endurance: 1, agility: 1, intellect: 1 };
+            if (hadLegacyDemoStats) {
+              parsed.level = 1;
+              parsed.totalWorkouts = 0;
+              parsed.currentXp = 0;
+              parsed.streakDays = 0;
+              parsed.positionTitle = 'ALL (Новичок)';
+            }
+          }
+        }
+
         // If we are in Telegram and the saved profile was the demo "Алекс Смирнов", create a fresh real account
         if (currentTg && (parsed.name === 'Алекс Смирнов' || parsed.username === '@alex_fit')) {
           return createStarterProfile(currentTg);
@@ -551,12 +569,7 @@ export default function App() {
         <TelegramHeader
           profile={profile}
           onOpenCardStudio={() => setActiveTab('fifa_card')}
-          onOpenProfileModal={() => {
-            const userOvr = calculateOvr(profile);
-            const myPublicProfile = buildPublicProfileFromLocal(profile, achievements);
-            myPublicProfile.ovr = userOvr;
-            handleOpenUserProfile(myPublicProfile);
-          }}
+          onOpenProfileModal={() => setActiveTab('profile')}
         />
 
         {/* Dynamic Tab Views */}
@@ -597,10 +610,21 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'profile' && (
+            <ProfileView
+              profile={profile}
+              achievements={achievements}
+              onUpdateProfile={handleUpdateProfile}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+              onClaimReward={handleClaimAchievementReward}
+            />
+          )}
+
           {activeTab === 'fifa_card' && (
             <FifaCardStudio
               profile={profile}
               onUpdateProfile={handleUpdateProfile}
+              onBack={() => setActiveTab('profile')}
             />
           )}
 
@@ -609,6 +633,7 @@ export default function App() {
               achievements={achievements}
               profile={profile}
               onClaimReward={handleClaimAchievementReward}
+              onBack={() => setActiveTab('profile')}
             />
           )}
 

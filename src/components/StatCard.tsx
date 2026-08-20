@@ -55,7 +55,7 @@ const STAT_CONFIG = {
 export const StatCard: React.FC<StatCardProps> = ({ type, value, onSelectStatCategory }) => {
   const config = STAT_CONFIG[type];
   const Icon = config.icon;
-  const percentage = Math.min(100, Math.max(10, value));
+  const percentage = Math.min(100, Math.max(1, value));
 
   return (
     <div
