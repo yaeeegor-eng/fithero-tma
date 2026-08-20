@@ -25,6 +25,7 @@ import {
   createStarterProfile,
   getFreshAchievements
 } from './data/initialData';
+import { MAX_LEVEL } from './utils/cardTierUtils';
 import { INITIAL_EXERCISES } from './data/exercisesData';
 import { INITIAL_ACHIEVEMENTS } from './data/achievementsData';
 import {
@@ -295,7 +296,7 @@ export default function App() {
       updatedStats[statKey] = Math.min(99, updatedStats[statKey] + ach.statReward.amount);
     }
 
-    while (newXp >= targetXp) {
+    while (newXp >= targetXp && currentLvl < MAX_LEVEL) {
       newXp -= targetXp;
       currentLvl += 1;
       targetXp = getXpRequiredForLevel(currentLvl);
@@ -304,6 +305,11 @@ export default function App() {
       updatedStats.endurance = Math.min(99, updatedStats.endurance + 1);
       updatedStats.agility = Math.min(99, updatedStats.agility + 1);
       updatedStats.intellect = Math.min(99, updatedStats.intellect + 1);
+    }
+
+    if (currentLvl >= MAX_LEVEL) {
+      currentLvl = MAX_LEVEL;
+      newXp = Math.min(newXp, targetXp);
     }
 
     setProfile((prev) => ({
@@ -383,7 +389,7 @@ export default function App() {
     if (result.statsEarned.agility) updatedStats.agility = Math.min(99, updatedStats.agility + result.statsEarned.agility);
     if (result.statsEarned.intellect) updatedStats.intellect = Math.min(99, updatedStats.intellect + result.statsEarned.intellect);
 
-    while (newXp >= targetXp) {
+    while (newXp >= targetXp && currentLvl < MAX_LEVEL) {
       newXp -= targetXp;
       currentLvl += 1;
       targetXp = getXpRequiredForLevel(currentLvl);
@@ -392,6 +398,11 @@ export default function App() {
       updatedStats.endurance = Math.min(99, updatedStats.endurance + 1);
       updatedStats.agility = Math.min(99, updatedStats.agility + 1);
       updatedStats.intellect = Math.min(99, updatedStats.intellect + 1);
+    }
+
+    if (currentLvl >= MAX_LEVEL) {
+      currentLvl = MAX_LEVEL;
+      newXp = Math.min(newXp, targetXp);
     }
 
     const newProfile: UserProfile = {
@@ -645,6 +656,14 @@ export default function App() {
             achievementsList={achievements}
             isCurrentUser={viewingUserProfile.id === 'current_user' || viewingUserProfile.id === profile.id}
             onClose={() => setViewingUserProfile(null)}
+            onUpdateBio={(newBio) => {
+              handleUpdateProfile({ bio: newBio });
+              setViewingUserProfile((prev) => (prev ? { ...prev, bio: newBio } : null));
+            }}
+            onOpenCardStudio={() => {
+              setViewingUserProfile(null);
+              setActiveTab('fifa_card');
+            }}
           />
         )}
 

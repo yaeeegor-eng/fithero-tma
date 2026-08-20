@@ -319,7 +319,7 @@ export function buildPublicProfileFromLocal(
     streakDays: profile.streakDays,
     longestStreak: profile.longestStreak,
     totalWorkouts: profile.totalWorkouts,
-    bio: 'Стремлюсь к 99 OVR во всех четырех дисциплинах. Тренируюсь каждый день с FitHero.',
+    bio: profile.bio || 'Стремлюсь к 99 OVR во всех четырех дисциплинах. Тренируюсь каждый день с FitHero.',
     stats: profile.stats,
     fifaCardTheme: profile.fifaCardTheme,
     positionTitle: profile.positionTitle,

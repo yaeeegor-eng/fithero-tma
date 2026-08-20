@@ -20,6 +20,7 @@ export interface UserProfile {
   streakDays: number;
   longestStreak: number;
   lastWorkoutDate: string | null;
+  bio?: string;
   stats: UserStats;
   fifaCardTheme: 'auto' | 'bronze' | 'silver' | 'gold' | 'blue_totw' | 'red_icon' | 'diamond' | 'onyx' | 'mythic';
   positionTitle: string;

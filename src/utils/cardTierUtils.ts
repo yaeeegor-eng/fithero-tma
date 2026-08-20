@@ -1,9 +1,12 @@
 // FitHero FUT Card Level Progression & Tier Definitions
 import { UserProfile } from '../types';
 
+export const MAX_LEVEL = 50;
+
 export interface CardTierInfo {
   tierId: 'bronze' | 'silver' | 'gold' | 'diamond' | 'red_icon' | 'mythic';
   minLevel: number;
+  maxLevel: number;
   tierNumber: number;
   tierName: string;
   tierSubtitle: string;
@@ -27,9 +30,10 @@ export const CARD_TIERS: Record<string, CardTierInfo> = {
   bronze: {
     tierId: 'bronze',
     minLevel: 1,
+    maxLevel: 10,
     tierNumber: 1,
     tierName: 'Бронзовый Новичок',
-    tierSubtitle: 'Бронзовый Новичок (Уровень 1-4)',
+    tierSubtitle: 'Бронзовый Новичок (Уровни 1–10)',
     themeTitle: 'БРОНЗОВЫЙ РАНГ',
     cardBg: 'from-[#1c120c] via-[#2d1b12] to-[#120a06]',
     badgeBg: 'bg-[#78350F]',
@@ -43,14 +47,15 @@ export const CARD_TIERS: Record<string, CardTierInfo> = {
     frameAccent: 'border-amber-700/40 bg-amber-950/40',
     cardBorder: 'border-amber-700/50',
     headerAccent: 'text-amber-400',
-    rarityTag: 'РАНГ 1 • НОВИЧОК'
+    rarityTag: 'РАНГ 1 • БРОНЗА (1-10)'
   },
   silver: {
     tierId: 'silver',
-    minLevel: 5,
+    minLevel: 11,
+    maxLevel: 20,
     tierNumber: 2,
     tierName: 'Серебряный Атлет',
-    tierSubtitle: 'Серебряный Атлет (Уровень 5-8)',
+    tierSubtitle: 'Серебряный Атлет (Уровни 11–20)',
     themeTitle: 'СЕРЕБРЯНЫЙ РАНГ',
     cardBg: 'from-[#0f172a] via-[#1e293b] to-[#090d16]',
     badgeBg: 'bg-slate-300 text-slate-900',
@@ -64,14 +69,15 @@ export const CARD_TIERS: Record<string, CardTierInfo> = {
     frameAccent: 'border-slate-500/40 bg-slate-800/40',
     cardBorder: 'border-slate-400/50',
     headerAccent: 'text-slate-200',
-    rarityTag: 'РАНГ 2 • СЕРЕБРО'
+    rarityTag: 'РАНГ 2 • СЕРЕБРО (11-20)'
   },
   gold: {
     tierId: 'gold',
-    minLevel: 9,
+    minLevel: 21,
+    maxLevel: 30,
     tierNumber: 3,
     tierName: 'Золотая Элита',
-    tierSubtitle: 'Золотая Элита (Уровень 9-12)',
+    tierSubtitle: 'Золотая Элита (Уровни 21–30)',
     themeTitle: 'ЗОЛОТОЙ РАНГ',
     cardBg: 'from-[#2e1d03] via-[#4d3306] to-[#170e01]',
     badgeBg: 'bg-gradient-to-r from-amber-400 to-yellow-500',
@@ -85,14 +91,15 @@ export const CARD_TIERS: Record<string, CardTierInfo> = {
     frameAccent: 'border-amber-400/40 bg-amber-950/40',
     cardBorder: 'border-amber-400/60',
     headerAccent: 'text-amber-300',
-    rarityTag: 'РАНГ 3 • ЗОЛОТО'
+    rarityTag: 'РАНГ 3 • ЗОЛОТО (21-30)'
   },
   diamond: {
     tierId: 'diamond',
-    minLevel: 13,
+    minLevel: 31,
+    maxLevel: 40,
     tierNumber: 4,
     tierName: 'Алмазный Чемпион',
-    tierSubtitle: 'Алмазный Чемпион (Уровень 13-17)',
+    tierSubtitle: 'Алмазный Чемпион (Уровни 31–40)',
     themeTitle: 'АЛМАЗНЫЙ РАНГ',
     cardBg: 'from-[#03152d] via-[#092957] to-[#020b17]',
     badgeBg: 'bg-[#1664B0]',
@@ -106,15 +113,16 @@ export const CARD_TIERS: Record<string, CardTierInfo> = {
     frameAccent: 'border-sky-400/50 bg-sky-950/40',
     cardBorder: 'border-sky-400/60',
     headerAccent: 'text-sky-300',
-    rarityTag: 'РАНГ 4 • АЛМАЗ'
+    rarityTag: 'РАНГ 4 • АЛМАЗ (31-40)'
   },
   red_icon: {
     tierId: 'red_icon',
-    minLevel: 18,
+    minLevel: 41,
+    maxLevel: 50,
     tierNumber: 5,
     tierName: 'Легендарная Икона',
-    tierSubtitle: 'Легендарная Икона (Уровень 18-24)',
-    themeTitle: 'ЛЕГЕНДАРНЫЙ РАНГ',
+    tierSubtitle: 'Легендарная Икона (Уровни 41–50)',
+    themeTitle: 'ЛЕГЕНДАРНЫЙ РАНГ 50',
     cardBg: 'from-[#220205] via-[#45050d] to-[#120103]',
     badgeBg: 'bg-[#D21624]',
     badgeText: 'text-white font-black',
@@ -127,15 +135,16 @@ export const CARD_TIERS: Record<string, CardTierInfo> = {
     frameAccent: 'border-rose-500/50 bg-red-950/40',
     cardBorder: 'border-[#D21624]/70',
     headerAccent: 'text-rose-400',
-    rarityTag: 'РАНГ 5 • ЛЕГЕНДА'
+    rarityTag: 'РАНГ 5 • ЛЕГЕНДА (41-50)'
   },
   mythic: {
     tierId: 'mythic',
-    minLevel: 25,
-    tierNumber: 6,
+    minLevel: 41,
+    maxLevel: 50,
+    tierNumber: 5,
     tierName: 'Мифический Титан',
-    tierSubtitle: 'Мифический Титан (Уровень 25+)',
-    themeTitle: 'МИФИЧЕСКИЙ РАНГ 99',
+    tierSubtitle: 'Мифический Титан (Уровень 50 MAX)',
+    themeTitle: 'МИФИЧЕСКИЙ РАНГ 50',
     cardBg: 'from-[#050507] via-[#121217] to-[#020203]',
     badgeBg: 'bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-500',
     badgeText: 'text-white font-black',
@@ -148,7 +157,7 @@ export const CARD_TIERS: Record<string, CardTierInfo> = {
     frameAccent: 'border-amber-400/60 bg-zinc-900/60',
     cardBorder: 'border-amber-400/80',
     headerAccent: 'text-amber-400',
-    rarityTag: 'РАНГ 6 • МИФИЧЕСКИЙ'
+    rarityTag: 'РАНГ 5 • МАКСИМУМ'
   }
 };
 
@@ -168,10 +177,9 @@ export function resolveTierForProfile(profile: UserProfile): CardTierInfo {
 }
 
 export function getTierByLevel(level: number): CardTierInfo {
-  if (level >= 25) return CARD_TIERS.mythic;
-  if (level >= 18) return CARD_TIERS.red_icon;
-  if (level >= 13) return CARD_TIERS.diamond;
-  if (level >= 9) return CARD_TIERS.gold;
-  if (level >= 5) return CARD_TIERS.silver;
+  if (level >= 41) return CARD_TIERS.red_icon;
+  if (level >= 31) return CARD_TIERS.diamond;
+  if (level >= 21) return CARD_TIERS.gold;
+  if (level >= 11) return CARD_TIERS.silver;
   return CARD_TIERS.bronze;
 }

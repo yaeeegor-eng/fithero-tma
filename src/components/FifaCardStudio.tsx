@@ -23,11 +23,21 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
   const [editClub, setEditClub] = useState(profile.clubName);
   const [editPosition, setEditPosition] = useState(profile.positionTitle);
   const [editCountry, setEditCountry] = useState(profile.countryCode || '🇷🇺');
+  const [editBio, setEditBio] = useState(profile.bio || 'Стремлюсь к 99 OVR во всех четырех дисциплинах. Тренируюсь каждый день с FitHero.');
+
+  const openEditModal = () => {
+    setEditName(profile.name);
+    setEditClub(profile.clubName);
+    setEditPosition(profile.positionTitle);
+    setEditCountry(profile.countryCode || '🇷🇺');
+    setEditBio(profile.bio || 'Стремлюсь к 99 OVR во всех четырех дисциплинах. Тренируюсь каждый день с FitHero.');
+    setShowEditModal(true);
+  };
 
   const currentTier = resolveTierForProfile(profile);
   const userTierByLevel = getTierByLevel(profile.level);
 
-  // Available theme options with required level checks
+  // Available theme options with required level checks (10 levels per card tier)
   const themeOptions: Array<{
     id: UserProfile['fifaCardTheme'];
     name: string;
@@ -38,10 +48,10 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
   }> = [
     {
       id: 'auto',
-      name: `⚡ Авто-ранг: ${userTierByLevel.tierName}`,
+      name: `⚡ Авто-эволюция: ${userTierByLevel.tierName}`,
       levelReq: 1,
       color: userTierByLevel.badgeBg,
-      desc: 'Автоматически улучшается по мере роста уровня',
+      desc: 'Автоматически повышает ранг каждые 10 уровней',
       isAuto: true
     },
     {
@@ -49,42 +59,42 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
       name: CARD_TIERS.bronze.tierName,
       levelReq: CARD_TIERS.bronze.minLevel,
       color: 'bg-[#78350F]',
-      desc: 'Бронзовый стиль новичка'
+      desc: 'Бронзовый стиль атлета (Уровни 1–10)'
     },
     {
       id: 'silver',
       name: CARD_TIERS.silver.tierName,
       levelReq: CARD_TIERS.silver.minLevel,
       color: 'bg-slate-400',
-      desc: 'Серебряный хромированный титан'
+      desc: 'Серебряный хромированный ранг (Уровни 11–20)'
     },
     {
       id: 'gold',
       name: CARD_TIERS.gold.tierName,
       levelReq: CARD_TIERS.gold.minLevel,
       color: 'bg-amber-400',
-      desc: 'Золотая элитная чемпионская карта'
+      desc: 'Золотая элитная чемпионская карта (Уровни 21–30)'
     },
     {
       id: 'diamond',
       name: CARD_TIERS.diamond.tierName,
       levelReq: CARD_TIERS.diamond.minLevel,
       color: 'bg-[#1664B0]',
-      desc: 'Алмазный ультрамариновый сапфир'
+      desc: 'Алмазный ультрамариновый сапфир (Уровни 31–40)'
     },
     {
       id: 'red_icon',
       name: CARD_TIERS.red_icon.tierName,
       levelReq: CARD_TIERS.red_icon.minLevel,
       color: 'bg-[#D21624]',
-      desc: 'Легендарная карта FitHero Master'
+      desc: 'Легендарная карта FitHero Master (Уровни 41–50)'
     },
     {
       id: 'mythic',
       name: CARD_TIERS.mythic.tierName,
       levelReq: CARD_TIERS.mythic.minLevel,
       color: 'bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-500',
-      desc: 'Обсидиановый 99 OVR статус'
+      desc: 'Обсидиановый 99 OVR статус (Уровень 50 MAX)'
     }
   ];
 
@@ -142,7 +152,8 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
       name: editName,
       clubName: editClub,
       positionTitle: editPosition,
-      countryCode: editCountry
+      countryCode: editCountry,
+      bio: editBio
     });
     setShowEditModal(false);
     triggerHaptic('success');
@@ -167,7 +178,7 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
         <button
           onClick={() => {
             triggerHaptic('light');
-            setShowEditModal(true);
+            openEditModal();
           }}
           className="flex items-center gap-1 bg-stone-100 hover:bg-stone-200 text-slate-800 text-xs font-mono font-bold px-3.5 py-2.5 rounded-2xl transition-all active:scale-95 shrink-0"
         >
@@ -213,7 +224,7 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
           </div>
           <div className="text-right">
             <span className="bg-stone-100 text-slate-900 font-mono font-black text-xs px-2.5 py-1 rounded-xl">
-              УР. {profile.level}
+              {profile.level >= 50 ? 'УР. 50 (MAX)' : `УР. ${profile.level} / 50`}
             </span>
           </div>
         </div>
@@ -221,13 +232,13 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
         {/* Level Progression Progress Bar */}
         <div className="space-y-1">
           <div className="flex justify-between text-[10px] font-mono font-bold text-slate-500">
-            <span>Прогресс до следующего уровня</span>
-            <span>{profile.currentXp} / {profile.maxXp} Опыта</span>
+            <span>{profile.level >= 50 ? 'Достигнут абсолютный максимум!' : 'Прогресс до следующего уровня'}</span>
+            <span>{profile.level >= 50 ? 'MAX LVL' : `${profile.currentXp} / ${profile.maxXp} XP`}</span>
           </div>
           <div className="w-full h-2.5 bg-stone-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#D21624] rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, (profile.currentXp / profile.maxXp) * 100)}%` }}
+              style={{ width: `${profile.level >= 50 ? 100 : Math.min(100, (profile.currentXp / profile.maxXp) * 100)}%` }}
             />
           </div>
         </div>
@@ -448,6 +459,43 @@ export const FifaCardStudio: React.FC<FifaCardStudioProps> = ({ profile, onUpdat
                     className="w-full px-3.5 py-2.5 rounded-2xl bg-stone-50 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#D21624]/20"
                     required
                   />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-mono font-bold text-slate-700 block">Статус / О себе (Bio)</label>
+                  <span className="text-[10px] font-mono text-slate-400">{editBio.length}/140</span>
+                </div>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value.slice(0, 140))}
+                  rows={2}
+                  placeholder="Ваш личный девиз или статус атлета..."
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-stone-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#D21624]/20 resize-none"
+                  required
+                />
+                
+                {/* Fast Bio Presets */}
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {[
+                    '🎯 Стремлюсь к 99 OVR',
+                    '🔥 Дисциплина каждый день',
+                    '⚡ Быстрее, сильнее, умнее',
+                    '🏆 Строю лучшую версию себя'
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setEditBio(preset);
+                      }}
+                      className="text-[10px] font-mono bg-stone-100 hover:bg-stone-200 text-slate-700 px-2 py-0.5 rounded-lg transition-colors truncate max-w-full"
+                    >
+                      {preset}
+                    </button>
+                  ))}
                 </div>
               </div>
 

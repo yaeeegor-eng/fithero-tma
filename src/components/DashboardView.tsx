@@ -35,25 +35,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const ovr = calculateOvr(profile);
 
-  const days = [
-    { day: 'ПН', done: true },
-    { day: 'ВТ', done: true },
-    { day: 'СР', done: true },
-    { day: 'ЧТ', done: true },
-    { day: 'ПТ', done: true },
-    { day: 'СБ', done: true },
-    { day: 'ВС', done: false, isToday: true },
-  ];
+  // Dynamic 7-day week calculation (Monday - Sunday)
+  const now = new Date();
+  const currentDayOfWeek = (now.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - currentDayOfWeek);
+  monday.setHours(0, 0, 0, 0);
 
-  const weeklyBars = [
-    { day: 'ПН', height: '65%' },
-    { day: 'ВТ', height: '85%' },
-    { day: 'СР', height: '45%' },
-    { day: 'ЧТ', height: '95%' },
-    { day: 'ПТ', height: '70%' },
-    { day: 'СБ', height: '90%' },
-    { day: 'ВС', height: '30%', active: true },
-  ];
+  const dayLabels = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+
+  // Collect all unique date strings with actual workouts
+  const completedDateStrings = new Set<string>();
+  recentLogs.forEach((log) => {
+    if (log.dateStr) {
+      completedDateStrings.add(log.dateStr);
+    }
+  });
+  if (profile.lastWorkoutDate) {
+    completedDateStrings.add(profile.lastWorkoutDate);
+  }
+
+  const days = dayLabels.map((dayLabel, index) => {
+    const dayDate = new Date(monday);
+    dayDate.setDate(monday.getDate() + index);
+    const y = dayDate.getFullYear();
+    const m = String(dayDate.getMonth() + 1).padStart(2, '0');
+    const d = String(dayDate.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+
+    const isToday = index === currentDayOfWeek;
+    const isPast = index < currentDayOfWeek;
+    const isFuture = index > currentDayOfWeek;
+    const done = completedDateStrings.has(dateStr);
+
+    return {
+      day: dayLabel,
+      dateStr,
+      done,
+      isToday,
+      isPast,
+      isFuture
+    };
+  });
+
+  const weeklyBars = dayLabels.map((dayLabel, index) => {
+    const dayDate = new Date(monday);
+    dayDate.setDate(monday.getDate() + index);
+    const y = dayDate.getFullYear();
+    const m = String(dayDate.getMonth() + 1).padStart(2, '0');
+    const d = String(dayDate.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+
+    const dayXp = recentLogs
+      .filter((l) => l.dateStr === dateStr)
+      .reduce((sum, l) => sum + (l.xpEarned || 0), 0);
+
+    const isToday = index === currentDayOfWeek;
+    const heightPercent = dayXp > 0 ? Math.min(100, Math.max(25, (dayXp / 80) * 100)) : 10;
+
+    return {
+      day: dayLabel,
+      height: `${heightPercent}%`,
+      active: isToday,
+      dayXp
+    };
+  });
+
+  const totalWeekXp = weeklyBars.reduce((sum, b) => sum + b.dayXp, 0);
 
   const unlockedAchievementsCount = achievements.filter((a) => a.unlocked).length;
   const unclaimedAchievementsCount = achievements.filter((a) => a.unlocked && !a.claimed).length;
@@ -138,16 +186,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="grid grid-cols-7 gap-2">
             {days.map((d, i) => (
               <div key={i} className="flex flex-col items-center gap-1.5">
-                <span className="text-[9px] font-mono font-bold text-blue-200">
+                <span
+                  className={`text-[9px] font-mono font-bold transition-colors ${
+                    d.isToday ? 'text-white font-black' : 'text-blue-200'
+                  }`}
+                >
                   {d.day}
                 </span>
 
                 <div
-                  className={`w-full aspect-square max-w-[38px] rounded-2xl flex items-center justify-center text-xs font-mono font-bold transition-all ${
+                  className={`w-full aspect-square max-w-[38px] rounded-2xl flex items-center justify-center text-xs font-mono font-bold transition-all relative ${
                     d.done
-                      ? 'bg-white text-[#1664B0] shadow-xs'
+                      ? d.isToday
+                        ? 'bg-white text-[#1664B0] shadow-md ring-2 ring-white scale-105'
+                        : 'bg-white text-[#1664B0] shadow-xs'
                       : d.isToday
-                      ? 'bg-blue-400/30 text-white'
+                      ? 'bg-white/20 text-white ring-2 ring-white/70 shadow-xs'
                       : 'bg-white/10 text-blue-200/40'
                   }`}
                 >
@@ -244,7 +298,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <p className="text-xs text-slate-400 font-medium">Динамика прогресса атлета</p>
           </div>
           <span className="text-xs font-mono font-bold text-slate-900 bg-stone-100 px-2.5 py-1 rounded-xl">
-            +380 XP
+            +{totalWeekXp > 0 ? totalWeekXp : (recentLogs.length > 0 ? recentLogs[0].xpEarned : 35)} XP
           </span>
         </div>
 

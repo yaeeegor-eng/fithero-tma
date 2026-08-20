@@ -13,13 +13,16 @@ import {
   Award,
   Sparkles,
   Swords,
-  Heart
+  Edit3,
+  Check,
+  Share2,
+  Quote
 } from 'lucide-react';
 import { PublicUserProfile, Achievement } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { TrophyArtBadge } from './TrophyArtBadge';
 import { AthleteAvatar } from './AthleteAvatar';
-import { calculateOvr } from '../data/initialData';
+import confetti from 'canvas-confetti';
 
 interface UserProfileModalProps {
   user: PublicUserProfile;
@@ -27,19 +30,43 @@ interface UserProfileModalProps {
   onClose: () => void;
   onFollowToggle?: (userId: string) => void;
   isCurrentUser?: boolean;
+  onUpdateBio?: (newBio: string) => void;
+  onOpenCardStudio?: () => void;
 }
+
+const STATUS_PRESETS = [
+  '🎯 Стремлюсь к 99 OVR в 4 дисциплинах',
+  '🔥 Дисциплина каждый день без компромиссов',
+  '⚡ Быстрее, сильнее, умнее с каждым днем',
+  '🏋️‍♂️ Силовой прогресс и стальной характер',
+  '🧘 Внутренний баланс и чистый разум',
+  '🏆 Строю лучшую версию себя с FitHero',
+  '🚀 Только вперед к вершине лидерборда',
+  '💪 100 отжиманий каждое утро — мой стандарт'
+];
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   user,
   achievementsList = [],
   onClose,
   onFollowToggle,
-  isCurrentUser = false
+  isCurrentUser = false,
+  onUpdateBio,
+  onOpenCardStudio
 }) => {
   const [isFollowing, setIsFollowing] = useState(user.isFollowing || false);
   const [followers, setFollowers] = useState(user.followersCount || 100);
   const [cheered, setCheered] = useState(false);
   const [challenged, setChallenged] = useState(false);
+
+  // Status/Bio Editing State
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [currentBio, setCurrentBio] = useState(
+    user.bio || 'Стремлюсь к 99 OVR во всех четырех дисциплинах. Тренируюсь каждый день с FitHero.'
+  );
+  const [bioInput, setBioInput] = useState(currentBio);
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
 
   const stats = user.stats || {
     strength: 75,
@@ -76,6 +103,39 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     triggerHaptic('heavy');
     setChallenged(true);
     setTimeout(() => setChallenged(false), 3000);
+  };
+
+  const handleSaveBio = (overrideText?: string) => {
+    const textToSave = (overrideText !== undefined ? overrideText : bioInput).trim();
+    if (!textToSave) return;
+
+    triggerHaptic('success');
+    setCurrentBio(textToSave);
+    setIsEditingBio(false);
+
+    if (onUpdateBio) {
+      onUpdateBio(textToSave);
+    }
+
+    setShowSavedToast(true);
+    setTimeout(() => setShowSavedToast(false), 2500);
+  };
+
+  const handleShareProfile = () => {
+    triggerHaptic('medium');
+    const shareText = `Профиль атлета ${user.name} в FitHero TMA:\n⭐ Рейтинг: ${user.ovr} ОБЩ (Уровень ${user.level})\n💬 «${currentBio}»\n🔥 Стрик: ${user.streakDays} дней | Трофеев: ${userTrophies.length}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: `${user.name} - Профиль FitHero`,
+        text: shareText,
+        url: window.location.href
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareText);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2500);
+    }
   };
 
   return (
@@ -136,12 +196,124 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           </div>
 
-          {/* Bio text */}
-          {user.bio && (
-            <p className="text-xs text-slate-600 font-medium mt-3.5 pt-3 border-t border-stone-100 italic leading-relaxed">
-              «{user.bio}»
-            </p>
-          )}
+          {/* Bio / Status Section */}
+          <div className="mt-3.5 pt-3 border-t border-stone-100">
+            {isCurrentUser ? (
+              <div>
+                {!isEditingBio ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <Quote className="w-3 h-3 text-[#1664B0]" /> СТАТУС В ПРОФИЛЕ
+                      </span>
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setBioInput(currentBio);
+                          setIsEditingBio(true);
+                        }}
+                        className="text-[10px] font-mono font-bold text-[#1664B0] hover:text-blue-800 flex items-center gap-1 py-0.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Изменить статус</span>
+                      </button>
+                    </div>
+
+                    <p
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setBioInput(currentBio);
+                        setIsEditingBio(true);
+                      }}
+                      className="text-xs text-slate-700 font-medium italic leading-relaxed cursor-pointer hover:text-slate-900 transition-all bg-stone-50/80 hover:bg-stone-100 p-2.5 rounded-2xl border border-dashed border-stone-200"
+                      title="Нажмите, чтобы изменить статус"
+                    >
+                      «{currentBio}»
+                    </p>
+
+                    {showSavedToast && (
+                      <div className="text-[10px] font-mono font-bold text-emerald-600 flex items-center gap-1 animate-in fade-in">
+                        <Check className="w-3 h-3" /> Статус успешно обновлен!
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Active Inline Status Editor */
+                  <div className="bg-stone-50 rounded-2xl p-3 border border-stone-200 space-y-2.5 animate-in fade-in zoom-in-95">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-slate-700 uppercase flex items-center gap-1">
+                        <Edit3 className="w-3 h-3 text-[#D21624]" /> Ваш статус атлета
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-400">
+                        {bioInput.length}/140
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={bioInput}
+                      onChange={(e) => setBioInput(e.target.value.slice(0, 140))}
+                      rows={2}
+                      placeholder="Напишите свой статус или девиз..."
+                      className="w-full px-3 py-2 rounded-xl bg-white text-xs font-medium text-slate-900 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-[#D21624]/20 resize-none shadow-2xs"
+                      autoFocus
+                    />
+
+                    {/* Quick Preset Badges */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-mono text-slate-400 block">Быстрые варианты:</span>
+                      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto no-scrollbar">
+                        {STATUS_PRESETS.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setBioInput(preset);
+                            }}
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded-lg transition-all text-left ${
+                              bioInput === preset
+                                ? 'bg-slate-900 text-white font-bold'
+                                : 'bg-white hover:bg-stone-200 text-slate-700 border border-stone-200'
+                            }`}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setIsEditingBio(false);
+                        }}
+                        className="flex-1 py-1.5 rounded-xl bg-stone-200 text-slate-700 text-xs font-mono font-bold hover:bg-stone-300 transition-all"
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveBio()}
+                        className="flex-1 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-mono font-bold hover:bg-black shadow-2xs transition-all flex items-center justify-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        Сохранить
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Public profile view */
+              user.bio && (
+                <p className="text-xs text-slate-600 font-medium italic leading-relaxed">
+                  «{user.bio}»
+                </p>
+              )
+            )}
+          </div>
 
           {/* Key Metrics Row */}
           <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-stone-100 text-center">
@@ -165,8 +337,35 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons for non-current user */}
-          {!isCurrentUser && (
+          {/* Action Buttons for current user */}
+          {isCurrentUser ? (
+            <div className="grid grid-cols-2 gap-2 mt-3.5 pt-2">
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setBioInput(currentBio);
+                  setIsEditingBio((prev) => !prev);
+                }}
+                className="py-2.5 rounded-2xl font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs bg-stone-100 hover:bg-stone-200 text-slate-800 active:scale-95"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-[#1664B0]" />
+                {isEditingBio ? 'Скрыть редактор' : 'Изменить статус'}
+              </button>
+
+              <button
+                onClick={() => {
+                  triggerHaptic('medium');
+                  onClose();
+                  if (onOpenCardStudio) onOpenCardStudio();
+                }}
+                className="py-2.5 rounded-2xl font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs bg-slate-900 hover:bg-black text-white active:scale-95"
+              >
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+                Карточка атлета
+              </button>
+            </div>
+          ) : (
+            /* Action Buttons for non-current user */
             <div className="grid grid-cols-3 gap-2 mt-3.5 pt-2">
               <button
                 onClick={handleFollow}
